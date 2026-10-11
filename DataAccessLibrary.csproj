@@ -4,13 +4,14 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{12345678-1234-1234-1234-123456789012}</ProjectGuid>
+    <ProjectGuid>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>DataAccessLibrary</RootNamespace>
     <AssemblyName>DataAccessLibrary</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -32,23 +33,32 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Interfaces\IDataAccess.cs" />
-    <Compile Include="Interfaces\ILogger.cs" />
-    <Compile Include="Implementations\Logger.cs" />
-    <Compile Include="Implementations\MySqlDataAccess.cs" />
-    <Compile Include="Implementations\SqlServerDataAccess.cs" />
-    <Compile Include="Implementations\OracleDataAccess.cs" />
-    <Compile Include="Implementations\PostgreSqlDataAccess.cs" />
-    <Compile Include="Factory\DataAccessFactory.cs" />
+    <Compile Include="Models\DatabaseType.cs" />
     <Compile Include="Models\DatabaseConfig.cs" />
     <Compile Include="Validators\DataValidator.cs" />
+    <Compile Include="Helpers\LogHelper.cs" />
+    <Compile Include="Interfaces\IDataAccess.cs" />
+    <Compile Include="QueryBuilder\QueryBuilder.cs" />
+    <Compile Include="Factory\DataAccessFactory.cs" />
+    <Compile Include="Core\DataAccess.cs" />
+    <Compile Include="Repositories\IRepository.cs" />
+    <Compile Include="Repositories\RepositoryBase.cs" />
+    <Compile Include="Examples\Models.cs" />
+    <Compile Include="Examples\CrudHelper.cs" />
+    <Compile Include="Examples\DataAccessDemoForm.cs" />
+    <Compile Include="Examples\DataAccessDemoForm.Designer.cs">
+      <DependentUpon>DataAccessDemoForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Examples\UsageExample.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Examples\app.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -1,97 +1,208 @@
-# DataAccessLibrary - Multi-Database CRUD Library
+# DataAccessLibrary - Multi-Database Access Layer
 
-## ภาพรวม
-DataAccessLibrary คือไลบรารี่ .NET Framework สำหรับจัดการฐานข้อมูลหลายชนิด:
-- SQL Server
-- MySQL
-- Oracle
-- PostgreSQL
+## 📋 Overview
 
-## วิธีใช้งาน
+DataAccessLibrary เป็นไลบรารี่ .NET Framework ที่ออกแบบมาสำหรับ:
+- ✅ WinForms Applications
+- ✅ Console Applications  
+- ✅ Web Applications
+- ✅ Multi-Database Support (SQL Server, MySQL, Oracle, PostgreSQL)
+- ✅ .NET Framework 3.5 ขึ้นไป
 
-### 1. Setup Connection String
-```csharp
-DatabaseConfig config = new DatabaseConfig();
-config.DatabaseType = DatabaseType.SqlServer;
-config.ConnectionString = "Server=localhost;Database=MyDB;User Id=sa;Password=1234;";
-config.CommandTimeout = 30;
-config.LogPath = Application.StartupPath + "\\logs\\dataaccess.log";
+## 🎯 ลักษณะการใช้งาน
+
+คุณแค่กำหนด 4 สิ่งนี้:
+1. **ConnectionString** - เชื่อมต่อ Database
+2. **Select** - กรอก table, columns, where clause
+3. **Insert** - กรอก table, values
+4. **Update/Delete** - กรอก table, values, where clause
+5. **Join** - สามารถรวมหลาย table ได้
+
+## 📁 Project Structure
+
+```
+DataAccessLibrary/
+├── Core/
+│   └── DataAccess.cs                    # Main database access class
+├── Models/
+│   ├── DatabaseType.cs                  # Enum for database types
+│   └── DatabaseConfig.cs                # Configuration class
+├── QueryBuilder/
+│   └── QueryBuilder.cs                  # Fluent SQL query builder
+├── Validators/
+│   └── DataValidator.cs                 # Data validation utilities
+├── Helpers/
+│   └── LogHelper.cs                     # Logging utilities
+├── Interfaces/
+│   └── IDataAccess.cs                   # DataAccess interface
+├── Factory/
+│   └── DataAccessFactory.cs             # Factory pattern
+├── Repositories/
+│   ├── IRepository.cs                   # Generic repository interface
+│   └── RepositoryBase.cs                # Base repository class
+├── Examples/
+│   ├── Models.cs                        # User & Department models
+│   ├── CrudHelper.cs                    # Simple CRUD helper
+│   ├── DataAccessDemoForm.cs            # WinForms example
+│   ├── DataAccessDemoForm.Designer.cs   # WinForms designer
+│   ├── UsageExample.cs                  # Console examples
+│   └── app.config                       # Configuration examples
+├── Properties/
+│   └── AssemblyInfo.cs                  # Assembly information
+├── DataAccessLibrary.csproj             # Project file
+├── README.md                            # This file
+└── GUIDE.md                             # Complete guide
 ```
 
-### 2. สร้าง IDataAccess Instance
+## 🚀 Quick Start
+
+### 1. Create Connection Config
 ```csharp
-IDataAccess db = DataAccessFactory.Create(config);
+var config = new DatabaseConfig
+{
+    DatabaseType = DatabaseType.SqlServer,
+    ConnectionString = "Server=localhost;Database=DemoDB;User Id=sa;Password=1234;",
+    LogPath = Application.StartupPath + "\\logs\\dataaccess.log",
+    CommandTimeout = 30
+};
 ```
 
-### 3. ใช้ QueryBuilder สำหรับ SELECT
+### 2. Create DataAccess Instance
+```csharp
+using (IDataAccess db = DataAccessFactory.Create(config))
+{
+    db.Open();
+    // Your code here
+}
+```
+
+### 3. Use CrudHelper for Quick CRUD
+```csharp
+var crud = new CrudHelper(db);
+
+// SELECT
+var users = crud.Select("Users");
+var activeUsers = crud.Select("Users", "Status = @Status", 
+    new Dictionary<string, object> { { "@Status", "Active" } });
+
+// INSERT
+crud.Insert("Users", new Dictionary<string, object>
+{
+    { "UserName", "John" },
+    { "Email", "john@example.com" },
+    { "Status", "Active" }
+});
+
+// UPDATE
+crud.Update("Users", 
+    new Dictionary<string, object> { { "Status", "Inactive" } },
+    "UserId = @UserId",
+    new Dictionary<string, object> { { "@UserId", 1 } });
+
+// DELETE
+crud.Delete("Users", "UserId = @UserId",
+    new Dictionary<string, object> { { "@UserId", 1 } });
+```
+
+### 4. Use Repository Pattern for Type-Safe Operations
+```csharp
+var userRepo = new UserRepository(db);
+
+// GET ALL
+var users = userRepo.GetAll();
+
+// GET BY ID
+var user = userRepo.GetById(1);
+
+// ADD
+userRepo.Add(new User { UserName = "Jane", Email = "jane@example.com" });
+
+// UPDATE
+user.UserName = "Updated";
+userRepo.Update(user);
+
+// DELETE
+userRepo.Delete(1);
+```
+
+### 5. Use QueryBuilder for Complex Queries
 ```csharp
 var builder = new QueryBuilder(DatabaseType.SqlServer);
 var sql = builder
-    .Select("u.UserId", "u.UserName", "u.Email", "d.DepartmentName")
+    .Select("u.UserId", "u.UserName", "d.DepartmentName")
     .From("Users", "u")
     .InnerJoin("Departments", "u.DepartmentId = d.DepartmentId", "d")
-    .Where("u.Status = @Status", new Dictionary<string, object> { { "@Status", "Active" } })
-    .And("d.IsActive = @IsActive", new Dictionary<string, object> { { "@IsActive", true } })
+    .Where("u.Status = @Status", 
+        new Dictionary<string, object> { { "@Status", "Active" } })
     .OrderBy("u.UserName", "ASC")
     .BuildSelect();
 
-DataTable dt = db.ExecuteQuery(sql, builder.GetParameters());
+var result = db.ExecuteQuery(sql, builder.GetParameters());
 ```
 
-### 4. INSERT
+## 📚 CrudHelper Methods
+
+### SELECT
 ```csharp
-var builder = new QueryBuilder(DatabaseType.SqlServer);
-var data = new Dictionary<string, object>()
+// Select all
+crud.Select("Users");
+
+// Select with WHERE
+crud.Select("Users", "Status = @Status", parameters);
+
+// Select specific columns
+crud.SelectColumns("Users", new[] { "UserId", "UserName", "Email" });
+
+// Select with JOIN
+crud.SelectWithJoin(
+    tableName: "Users",
+    tableAlias: "u",
+    selectColumns: new[] { "u.UserId", "u.UserName", "d.DepartmentName" },
+    joinType: "INNER",  // INNER, LEFT, RIGHT, FULL
+    joinTable: "Departments",
+    joinAlias: "d",
+    joinCondition: "u.DepartmentId = d.DepartmentId"
+);
+```
+
+### INSERT
+```csharp
+crud.Insert("Users", new Dictionary<string, object>
 {
-    { "UserName", "John Doe" },
+    { "UserName", "John" },
     { "Email", "john@example.com" },
     { "Status", "Active" }
-};
-
-var sql = builder.BuildInsert("Users", data);
-int result = db.ExecuteNonQuery(sql, builder.GetParameters());
-
-if (result > 0)
-    MessageBox.Show("Insert successful");
+});
 ```
 
-### 5. UPDATE
+### UPDATE
 ```csharp
-var builder = new QueryBuilder(DatabaseType.SqlServer);
-var values = new Dictionary<string, object>()
-{
-    { "UserName", "Jane Doe" },
-    { "Email", "jane@example.com" }
-};
-
-var whereParams = new Dictionary<string, object>()
-{
-    { "@UserId", 1 }
-};
-
-var sql = builder.BuildUpdate("Users", values, "UserId = @UserId", whereParams);
-int result = db.ExecuteNonQuery(sql, builder.GetParameters());
+crud.Update("Users",
+    new Dictionary<string, object> { { "UserName", "Jane" } },
+    "UserId = @UserId",
+    new Dictionary<string, object> { { "@UserId", 1 } });
 ```
 
-### 6. DELETE
+### DELETE
 ```csharp
-var builder = new QueryBuilder(DatabaseType.SqlServer);
-var whereParams = new Dictionary<string, object>()
-{
-    { "@UserId", 1 }
-};
-
-var sql = builder.BuildDelete("Users", "UserId = @UserId", whereParams);
-int result = db.ExecuteNonQuery(sql, builder.GetParameters());
+crud.Delete("Users", "UserId = @UserId",
+    new Dictionary<string, object> { { "@UserId", 1 } });
 ```
 
-## JOIN Examples
+### COUNT & EXISTS
+```csharp
+int total = crud.Count("Users");
+bool exists = crud.Exists("Users", "UserId = @UserId", 
+    new Dictionary<string, object> { { "@UserId", 1 } });
+```
+
+## 🔗 JOIN Examples
 
 ### INNER JOIN
 ```csharp
 var builder = new QueryBuilder(DatabaseType.SqlServer);
 var sql = builder
-    .Select("*")
+    .Select("u.*", "d.DepartmentName")
     .From("Users", "u")
     .InnerJoin("Departments", "u.DepartmentId = d.DepartmentId", "d")
     .BuildSelect();
@@ -100,9 +211,27 @@ var sql = builder
 ### LEFT JOIN
 ```csharp
 var sql = builder
-    .Select("*")
+    .Select("u.*", "o.OrderId")
     .From("Users", "u")
     .LeftJoin("Orders", "u.UserId = o.UserId", "o")
+    .BuildSelect();
+```
+
+### RIGHT JOIN
+```csharp
+var sql = builder
+    .Select("u.*", "o.OrderId")
+    .From("Users", "u")
+    .RightJoin("Orders", "u.UserId = o.UserId", "o")
+    .BuildSelect();
+```
+
+### FULL OUTER JOIN
+```csharp
+var sql = builder
+    .Select("u.*", "o.OrderId")
+    .From("Users", "u")
+    .FullOuterJoin("Orders", "u.UserId = o.UserId", "o")
     .BuildSelect();
 ```
 
@@ -113,70 +242,198 @@ var sql = builder
     .From("Users", "u")
     .InnerJoin("Departments", "u.DepartmentId = d.DepartmentId", "d")
     .LeftJoin("Orders", "u.UserId = o.UserId", "o")
-    .Where("u.Status = @Status", new Dictionary<string, object> { { "@Status", "Active" } })
+    .Where("u.Status = @Status", parameters)
     .OrderBy("u.UserName", "ASC")
     .BuildSelect();
 ```
 
-## WinForms Example
+## 🗄️ Database Support
+
+### SQL Server
 ```csharp
-public partial class Form1 : Form
+var config = new DatabaseConfig(
+    DatabaseType.SqlServer,
+    "Server=localhost;Database=DemoDB;User Id=sa;Password=1234;"
+);
+```
+
+### MySQL
+```csharp
+var config = new DatabaseConfig(
+    DatabaseType.MySql,
+    "Server=localhost;Database=DemoDB;User Id=root;Password=1234;"
+);
+```
+
+### Oracle
+```csharp
+var config = new DatabaseConfig(
+    DatabaseType.Oracle,
+    "Data Source=localhost:1521/XE;User Id=system;Password=oracle;"
+);
+```
+
+### PostgreSQL
+```csharp
+var config = new DatabaseConfig(
+    DatabaseType.PostgreSql,
+    "Host=localhost;Port=5432;Database=DemoDB;Username=postgres;Password=1234;"
+);
+```
+
+## 📝 Logging
+
+All operations are logged to:
+```
+{Application.StartupPath}\logs\dataaccess.log
+```
+
+Log entries include:
+- Timestamp
+- SQL Query
+- Parameters
+- Exception details
+- Affected rows count
+
+## ✔️ Validation
+
+```csharp
+// Check if empty
+DataValidator.ThrowIfEmpty(userName, "UserName");
+
+// Check if null
+DataValidator.ThrowIfNull(user, "User");
+
+// Validate length
+DataValidator.ValidateLength(userName, "UserName", 50);
+
+// Type checking
+DataValidator.IsInteger(value);
+DataValidator.IsDecimal(value);
+DataValidator.IsDate(value);
+
+// Safe string conversion
+string safe = DataValidator.SafeString(value);
+```
+
+## ⚠️ Error Handling
+
+All operations include try-catch and logging:
+```csharp
+try
 {
-    private IDataAccess _db;
-
-    public Form1()
-    {
-        InitializeComponent();
-        
-        var config = new DatabaseConfig(
-            DatabaseType.SqlServer,
-            "Server=localhost;Database=MyDB;User Id=sa;Password=1234;"
-        );
-        _db = DataAccessFactory.Create(config);
-    }
-
-    private void LoadData()
-    {
-        try
-        {
-            var builder = new QueryBuilder(DatabaseType.SqlServer);
-            var sql = builder
-                .Select("*")
-                .From("Users")
-                .Where("Status = @Status", new Dictionary<string, object> { { "@Status", "Active" } })
-                .BuildSelect();
-
-            DataTable dt = _db.ExecuteQuery(sql, builder.GetParameters());
-            dataGridView1.DataSource = dt;
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show("Error: " + ex.Message);
-        }
-    }
+    var result = crud.Select("Users");
+}
+catch (Exception ex)
+{
+    MessageBox.Show("Error: " + ex.Message);
+    // Exception is automatically logged
 }
 ```
 
-## Features
-- ✅ QueryBuilder Pattern สำหรับ SQL Query
-- ✅ รองรับ SQL Server, MySQL, Oracle, PostgreSQL
-- ✅ Automatic parameter binding
-- ✅ Logging system
-- ✅ Data validation
-- ✅ Transaction support
-- ✅ Compatible with .NET Framework 3.5+
-- ✅ WinForms friendly
+## 🎨 WinForms Integration
 
-## Installation
+See `Examples/DataAccessDemoForm.cs` for complete WinForms example with:
+- Select with DataGridView
+- Insert with TextBox
+- Update selected row
+- Delete with confirmation
+- Search functionality
+- JOIN example
 
-1. Add reference to DataAccessLibrary.dll
-2. Install required NuGet packages based on your database:
-   - MySQL: `MySql.Data`
-   - Oracle: `Oracle.ManagedDataAccess`
-   - PostgreSQL: `Npgsql`
+## 📦 Installation
 
-## Log Files
-Log files are saved to: `{Application.StartupPath}\logs\dataaccess.log`
+1. **Copy Files**: Copy entire DataAccessLibrary folder to your project
+2. **Add Reference**: Add DataAccessLibrary.dll to your project references
+3. **Install NuGet Packages** (based on your database):
+   ```
+   Install-Package MySql.Data          # For MySQL
+   Install-Package Oracle.ManagedDataAccess  # For Oracle
+   Install-Package Npgsql              # For PostgreSQL
+   ```
+4. **Update Connection String**: Change the connection string in your config
+5. **Use in Your Code**: Start using the library
 
-## License
-MIT License
+## 💡 Best Practices
+
+1. **Always use `using` statement**
+   ```csharp
+   using (IDataAccess db = DataAccessFactory.Create(config))
+   {
+       db.Open();
+       // Your code
+   }
+   ```
+
+2. **Always use parameterized queries**
+   ```csharp
+   crud.Select("Users", "UserId = @UserId", 
+       new Dictionary<string, object> { { "@UserId", id } });
+   ```
+
+3. **Use Repository Pattern for type-safe operations**
+   ```csharp
+   var userRepo = new UserRepository(db);
+   var users = userRepo.GetAll();
+   ```
+
+4. **Handle exceptions appropriately**
+   ```csharp
+   try
+   {
+       // Your code
+   }
+   catch (Exception ex)
+   {
+       MessageBox.Show("Error: " + ex.Message);
+   }
+   ```
+
+## 🔄 Supported Operations
+
+- ✅ SELECT (with WHERE, JOIN, GROUP BY, ORDER BY, LIMIT, OFFSET)
+- ✅ INSERT (single and multiple records)
+- ✅ UPDATE (with WHERE clause)
+- ✅ DELETE (with WHERE clause)
+- ✅ COUNT
+- ✅ EXISTS
+- ✅ INNER JOIN
+- ✅ LEFT JOIN
+- ✅ RIGHT JOIN
+- ✅ FULL OUTER JOIN
+- ✅ Multiple JOINs
+- ✅ Transactions
+- ✅ Parameterized queries
+- ✅ Logging
+- ✅ Validation
+
+## 📞 Support
+
+For issues or questions:
+1. Check `GUIDE.md` for detailed documentation
+2. See `Examples/UsageExample.cs` for code samples
+3. Review `Examples/DataAccessDemoForm.cs` for WinForms implementation
+
+## 📄 License
+
+MIT License - Free for personal and commercial use
+
+## 🎉 Features
+
+- Multi-Database Support (SQL Server, MySQL, Oracle, PostgreSQL)
+- Easy to use API (CrudHelper, Repository Pattern, QueryBuilder)
+- Automatic parameter binding
+- Comprehensive logging
+- Data validation
+- WinForms ready
+- .NET Framework 3.5+ compatible
+- No external dependencies required (uses built-in ADO.NET)
+- Exception handling
+- Connection management
+- Type-safe operations
+
+---
+
+**Version**: 1.0.0  
+**Author**: DataAccessLibrary Team  
+**Last Updated**: 2024  
